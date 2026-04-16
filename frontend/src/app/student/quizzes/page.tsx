@@ -26,6 +26,8 @@ type AssignedQuiz = {
 
 type ConsentState = { open: boolean; quiz: AssignedQuiz | null };
 
+import { useRouter } from 'next/navigation';
+
 export default function MyQuizzesPage() {
   const [tab, setTab] = useState<'active' | 'upcoming' | 'completed'>('active');
   const [quizzes, setQuizzes] = useState<{ active: AssignedQuiz[]; upcoming: AssignedQuiz[]; completed: AssignedQuiz[] }>({
@@ -33,16 +35,23 @@ export default function MyQuizzesPage() {
   });
   const [consent, setConsent] = useState<ConsentState>({ open: false, quiz: null });
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/student/assigned-quizzes?student_id=ST_001')
+    const studentId = localStorage.getItem('student_id');
+    if (!studentId) {
+      router.push('/student/login');
+      return;
+    }
+    
+    fetch(`http://localhost:8000/api/student/assigned-quizzes?student_id=${studentId}`)
       .then(r => r.json())
       .then(data => {
         setQuizzes({ active: data.active || [], upcoming: data.upcoming || [], completed: data.completed || [] });
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [router]);
 
   const handleStartQuiz = (quiz: AssignedQuiz) => {
     if (quiz.proctoring_mode === 'full') {
@@ -54,10 +63,11 @@ export default function MyQuizzesPage() {
 
   const confirmAndStart = async () => {
     if (!consent.quiz) return;
+    const studentId = localStorage.getItem('student_id') || 'ST_ANON';
     const res = await fetch(`http://localhost:8000/api/student/start-quiz/${consent.quiz.assignment_id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ student_id: 'ST_001' })
+      body: JSON.stringify({ student_id: studentId })
     });
     const data = await res.json();
     setConsent({ open: false, quiz: null });
@@ -148,7 +158,7 @@ export default function MyQuizzesPage() {
                   }`}>
                   
                   {/* Status Ring */}
-                  <div className={`relative w-16 h-16 rounded-2xl flex items-center justify-center border-2 flex-shrink-0 ${
+                  <div className={`relative w-16 h-16 rounded-2xl flex items-center justify-center border-2 shrink-0 ${
                     isCompleted ? 'bg-green-500/10 border-green-500/30' :
                     inProgress ? 'bg-neon-purple/10 border-neon-purple/30 animate-pulse' : 
                     'bg-white/5 border-white/5'
@@ -162,7 +172,7 @@ export default function MyQuizzesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-black tracking-tight group-hover:text-neon-purple transition-colors truncate">{quiz.title}</h3>
-                      <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase border tracking-widest flex-shrink-0 ${badge.color}`}>
+                      <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase border tracking-widest shrink-0 ${badge.color}`}>
                         {quiz.proctoring_mode === 'full' && <Shield className="inline w-3 h-3 mr-1" />}
                         {badge.label}
                       </span>
@@ -182,7 +192,7 @@ export default function MyQuizzesPage() {
                   </div>
 
                   {/* Action Button */}
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     {isCompleted ? (
                       <button className="px-6 py-3 glass-card text-[10px] font-black uppercase tracking-widest text-green-400 border-green-500/20">
                         VIEW RESULTS
@@ -207,13 +217,13 @@ export default function MyQuizzesPage() {
       <AnimatePresence>
         {consent.open && consent.quiz && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-2xl flex items-center justify-center p-8">
+            className="fixed inset-0 z-100 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-8">
             <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }}
               className="glass-card max-w-lg w-full p-12 border-neon-purple/30 relative overflow-hidden">
               
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-purple via-neon-blue to-transparent" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-neon-purple via-neon-blue to-transparent" />
               
-              <Shield className="text-neon-purple mb-6" size={48} />
+              <Shield className="text-neon-purple mb-6 shrink-0" size={48} />
               <h2 className="text-3xl font-black tracking-tighter mb-2 uppercase neon-text-purple">Forensic Consent</h2>
               <p className="text-gray-400 text-sm mb-8 leading-relaxed font-medium">
                 <strong className="text-white">"{consent.quiz.title}"</strong> requires full AI proctoring. Your webcam will be used for:
@@ -222,7 +232,7 @@ export default function MyQuizzesPage() {
               <ul className="space-y-3 mb-10">
                 {['Face detection & gaze tracking (Lip-Eye Sync)', 'Tab-switch and focus monitoring', 'Behavioral telemetry archival'].map((item, i) => (
                   <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
-                    <AlertTriangle className="text-yellow-500 flex-shrink-0" size={16} />
+                    <AlertTriangle className="text-yellow-500 shrink-0" size={16} />
                     <p className="text-xs text-gray-300 font-medium">{item}</p>
                   </div>
                 ))}

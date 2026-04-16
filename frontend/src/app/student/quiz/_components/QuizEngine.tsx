@@ -46,7 +46,7 @@ const QUESTIONS = [
 
 type Phase = 'identity' | 'quiz' | 'submitting' | 'done';
 
-export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
+export default function QuizEngine({ quizId }: { quizId: string }) {
   const safeId = quizId || 'demo-session';
 
   // ── Phase control ───────────────────────────────────────────────────────────
@@ -58,6 +58,13 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
   const [rollNo, setRollNo] = useState('');
   const [section, setSection] = useState('');
   const [consentChecked, setConsentChecked] = useState(false);
+
+  useEffect(() => {
+    const sname = localStorage.getItem('student_name');
+    const sid = localStorage.getItem('student_id');
+    if (sname) setStudentName(sname);
+    if (sid) setStudentId(sid);
+  }, []);
 
   // ── Quiz state ──────────────────────────────────────────────────────────────
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -202,7 +209,7 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
   // ══════════════════════════════════════════════════════════════════════════
   if (phase === 'identity') {
     return (
-      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">
+      <div className="min-h-screen bg-background text-white flex items-center justify-center p-8">
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-lg space-y-8">
 
@@ -217,7 +224,7 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
 
           {/* Form */}
           <div className="glass-card p-10 border-neon-purple/20 space-y-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-purple via-neon-blue to-transparent" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-neon-purple via-neon-blue to-transparent" />
 
             {[
               { label: 'Full Name *', placeholder: 'e.g. Alex Chen', value: studentName, setter: setStudentName, required: true },
@@ -242,7 +249,7 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
               onClick={() => setConsentChecked(!consentChecked)}
               className={`p-5 rounded-2xl border cursor-pointer flex items-start gap-4 transition-all ${consentChecked ? 'bg-neon-purple/10 border-neon-purple/40' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
             >
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center mt-0.5 border-2 flex-shrink-0 transition-all ${consentChecked ? 'bg-neon-purple border-neon-purple' : 'border-white/20'}`}>
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center mt-0.5 border-2 shrink-0 transition-all ${consentChecked ? 'bg-neon-purple border-neon-purple' : 'border-white/20'}`}>
                 {consentChecked && <Check size={14} className="text-white" />}
               </div>
               <div>
@@ -271,7 +278,7 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
   // ══════════════════════════════════════════════════════════════════════════
   if (phase === 'submitting' || phase === 'done') {
     return (
-      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-8">
+      <div className="min-h-screen bg-background text-white flex items-center justify-center p-8">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center max-w-md">
           <div className="w-24 h-24 rounded-full border-4 border-neon-purple/30 border-t-neon-purple animate-spin mx-auto mb-8" />
           <h2 className="text-3xl font-black tracking-tighter neon-text-purple uppercase mb-4">
@@ -297,7 +304,7 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
   // PHASE 2 — Quiz Session
   // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex flex-col font-sans antialiased overflow-hidden">
+    <div className="min-h-screen bg-background text-white flex flex-col font-sans antialiased overflow-hidden">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="h-24 border-b border-white/5 bg-black/60 backdrop-blur-3xl flex items-center justify-between px-16 z-50">
@@ -310,7 +317,7 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
               FORENSIC TELEMETRY ACTIVE • {answeredCount}/{QUESTIONS.length} ANSWERED
             </span>
           </div>
-          <div className="h-8 w-[1px] bg-white/10" />
+          <div className="h-8 w-px bg-white/10" />
           {/* Timer */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
@@ -421,7 +428,7 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
                         ? 'bg-neon-purple border-neon-purple shadow-[0_20px_50px_rgba(188,19,254,0.15)] scale-[1.01]'
                         : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/8'
                     }`}>
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all flex-shrink-0 ${
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black transition-all shrink-0 ${
                       answers[currentIdx] === idx ? 'bg-white text-black scale-110 rotate-3' : 'bg-white/5 text-gray-500 group-hover:bg-white/10 group-hover:text-white'
                     }`}>{String.fromCharCode(65 + idx)}</div>
                     <span className={`text-base font-semibold transition-colors ${answers[currentIdx] === idx ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>{opt}</span>
@@ -457,13 +464,13 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
         {/* ── Forensic Sidebar ─────────────────────────────────────────────── */}
         <aside className="col-span-3 border-l border-white/5 p-8 bg-black/60 flex flex-col gap-6 overflow-y-auto">
           <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] flex items-center gap-2">
-            <Monitor size={14} className="text-neon-purple" /> LIVE PROCTOR_UI
+            <Monitor size={14} className="text-neon-purple shrink-0" /> LIVE PROCTOR_UI
           </h3>
           {/* Webcam */}
           <div className="aspect-video w-full rounded-2xl overflow-hidden border border-white/10 bg-black/40 relative">
             <MediaPipeController onTelemetry={handleTelemetry} />
             <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur rounded-xl px-3 py-1.5 flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${latestTel?.isLookingAway ? 'bg-red-500 animate-pulse' : 'bg-green-400'}`} />
+              <div className={`w-2 h-2 rounded-full shrink-0 ${latestTel?.isLookingAway ? 'bg-red-500 animate-pulse' : 'bg-green-400'}`} />
               <span className="text-[8px] font-black uppercase text-gray-300 truncate">
                 {latestTel?.isLookingAway ? 'GAZE DEVIATION' : 'NEURAL PULSE ACTIVE'}
               </span>
@@ -516,7 +523,7 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
             <p className="text-[9px] text-gray-500">{studentId} {rollNo ? `• ${rollNo}` : ''} {section ? `• ${section}` : ''}</p>
           </div>
           {/* AI Co-Pilot */}
-          <div className="mt-auto glass-card p-6 border-neon-blue/20 bg-gradient-to-tr from-neon-blue/5 to-transparent">
+          <div className="mt-auto glass-card p-6 border-neon-blue/20 bg-linear-to-tr from-neon-blue/5 to-transparent">
             <div className="flex justify-between items-center mb-3">
               <Brain className="text-neon-blue" size={18} />
               <span className="text-[8px] font-black text-neon-blue uppercase border border-neon-blue/30 px-2 py-0.5 rounded-full">AI CO-PILOT</span>
@@ -536,10 +543,10 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
       <AnimatePresence>
         {showSubmitConfirm && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-xl flex items-center justify-center p-8">
+            className="fixed inset-0 z-200 bg-black/80 backdrop-blur-xl flex items-center justify-center p-8">
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }}
               className="glass-card max-w-md w-full p-12 text-center border-neon-purple/30 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-purple to-neon-blue" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-neon-purple to-neon-blue" />
               <Send className="text-neon-purple mx-auto mb-6" size={40} />
               <h3 className="text-2xl font-black uppercase tracking-tighter mb-2">Finalize Submission</h3>
               <p className="text-gray-400 text-sm mb-2">
@@ -575,7 +582,7 @@ export default function ForensicQuizEngine({ quizId }: { quizId: string }) {
       <AnimatePresence>
         {showExitWarning && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-8">
+            className="fixed inset-0 z-100 bg-black/80 backdrop-blur-md flex items-center justify-center p-8">
             <div className="glass-card p-12 max-w-lg text-center border-red-500/40">
               <AlertTriangle className="text-red-500 mx-auto mb-6" size={48} />
               <h3 className="text-3xl font-black mb-4 uppercase tracking-tighter text-red-500">Integrity Breach</h3>

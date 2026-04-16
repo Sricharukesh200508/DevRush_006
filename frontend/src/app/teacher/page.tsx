@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Activity, Users, AlertCircle, TrendingUp, Mic, 
-  Mail, MessageSquare, Video, Shield, ChevronRight,
-  Brain, BarChart3, Database, Sparkles, LayoutGrid
+  Shield, ChevronRight,
+  Brain, BarChart3, Database, Sparkles
 } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
-import * as echarts from 'echarts';
-import 'echarts-gl';
+
+// echarts-gl is a UMD-only module — must be side-effect-imported at runtime only
+let echartsGlLoaded = false;
 
 // Mock data for 2026 aesthetics
 const STUDENTS = [
@@ -22,35 +23,126 @@ const STUDENTS = [
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isListening, setIsListening] = useState(false);
+  const [chartReady, setChartReady] = useState(false);
 
-  // ECharts Heatmap Configuration (3D Placeholder)
+  const [chartData, setChartData] = useState<{ x: string[], y: string[], data: any[] }>({ x: [], y: [], data: [] });
+
+  // Dynamically load echarts-gl (UMD-only, cannot be statically imported)
+  useEffect(() => {
+    if (!echartsGlLoaded) {
+      import('echarts-gl').then(() => {
+        echartsGlLoaded = true;
+        setChartReady(true);
+      }).catch(() => setChartReady(true));
+    } else {
+      setChartReady(true);
+    }
+
+    // Fetch actual accurate numbers for the heatmap
+    fetch('http://localhost:8000/api/teacher/results')
+      .then(r => r.json())
+      .then(resData => {
+         const results = resData.results || [];
+         if (results.length === 0) return;
+
+         // Extract unique topics and students
+         const topicSet = new Set<string>();
+         const studentsMap = new Map<string, any>(); // id -> { name, topics: { topic -> score } }
+         
+         results.forEach((r: any) => {
+            const sname = r.student_name || 'Anonymous';
+            if (!studentsMap.has(sname)) {
+               studentsMap.set(sname, { name: sname, scores: {} });
+            }
+            
+            const p = r.topic_performance || [];
+            p.forEach((topic: any) => {
+               topicSet.add(topic.topic);
+               const existing = studentsMap.get(sname).scores[topic.topic] || { correct: 0, total: 0 };
+               existing.total += 1;
+               if (topic.is_correct) existing.correct += 1;
+               studentsMap.get(sname).scores[topic.topic] = existing;
+            });
+         });
+
+         const xTopics = Array.from(topicSet);
+         const yStudents = Array.from(studentsMap.keys());
+         const dataList: any[] = [];
+
+         yStudents.forEach((sname, yIdx) => {
+            xTopics.forEach((topic, xIdx) => {
+               const st = studentsMap.get(sname);
+               if (st.scores[topic]) {
+                  const accuracy = Math.round((st.scores[topic].correct / st.scores[topic].total) * 100);
+                  dataList.push([xIdx, yIdx, accuracy]);
+               } else {
+                  // Default to low value if no data
+                  dataList.push([xIdx, yIdx, 5]); 
+               }
+            });
+         });
+
+         setChartData({ x: xTopics, y: yStudents, data: dataList });
+      })
+      .catch(err => console.error("Could not fetch heatmap data:", err));
+  }, []);
+
+  // ECharts Heatmap Configuration (3D Live)
   const heatmapOption = {
     backgroundColor: 'transparent',
-    tooltip: {},
+    tooltip: {
+      formatter: (params: any) => {
+         const t = chartData.x[params.value[0]];
+         const s = chartData.y[params.value[1]];
+         const v = params.value[2];
+         return `${s}<br/>${t}: ${v}% Mastery`;
+      }
+    },
     visualMap: {
       max: 100,
       inRange: {
-        color: ['#3b82f6', '#00f2ff', '#bc13fe', '#ff0055']
+        color: ['#ff0055', '#ff4400', '#ffcc00', '#00ffaa', '#00f2ff', '#bc13fe'] // Extremely vibrant multi-color spectrum
       },
-      show: false
+      show: true,
+      textStyle: { color: '#aaa' }
     },
-    xAxis3D: { type: 'category', data: ['Topic 1', 'Topic 2', 'Topic 3', 'Topic 4', 'Topic 5'] },
-    yAxis3D: { type: 'category', data: ['Std A', 'Std B', 'Std C', 'Std D', 'Std E'] },
-    zAxis3D: { type: 'value' },
+    xAxis3D: { type: 'category', data: chartData.x.length > 0 ? chartData.x : ['A', 'B'], nameTextStyle: { color: '#fff' }, axisLabel: { color: '#ccc' } },
+    yAxis3D: { type: 'category', data: chartData.y.length > 0 ? chartData.y : ['1', '2'], nameTextStyle: { color: '#fff' }, axisLabel: { color: '#ccc' } },
+    zAxis3D: { type: 'value', max: 100, name: 'Mastery %', nameTextStyle: { color: '#fff' }, axisLabel: { color: '#ccc' } },
     grid3D: {
       boxWidth: 200,
-      boxDepth: 80,
-      viewControl: { projection: 'perspective' },
-      light: { main: { intensity: 1.2 }, ambient: { intensity: 0.3 } }
+      boxDepth: 100,
+      viewControl: { 
+         projection: 'perspective',
+         autoRotate: true,
+         autoRotateSpeed: 20,
+         distance: 280,
+         alpha: 25,
+         beta: 45
+      },
+      light: { main: { intensity: 1.8, shadow: true }, ambient: { intensity: 0.6 } },
+      postEffect: {
+         enable: true,
+         bloom: { enable: true, bloomIntensity: 0.4 }
+      }
     },
     series: [{
       type: 'bar3D',
-      data: [
-        [0, 0, 85], [1, 0, 40], [2, 0, 90], [3, 0, 75], [4, 0, 60],
-        [0, 1, 30], [1, 1, 95], [2, 1, 20], [3, 1, 55], [4, 1, 80],
-      ].map(item => ({ value: item, itemStyle: { opacity: 0.8 } })),
-      shading: 'lambert',
-      label: { show: false }
+      data: chartData.data.length > 0 ? chartData.data.map(item => ({ value: item, itemStyle: { opacity: 0.95 } })) : [[0,0,10]],
+      shading: 'color',
+      label: { 
+         show: true,
+         textStyle: {
+            fontSize: 12,
+            fontWeight: 'bold',
+            color: '#fff',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            padding: 2
+         },
+         formatter: (params: any) => `${params.value[2]}%`
+      },
+      animationDurationUpdate: 1500,
+      animationEasingUpdate: 'cubicOut'
     }]
   };
 
@@ -74,19 +166,7 @@ export default function TeacherDashboard() {
             {isListening && <span className="text-xs font-bold uppercase tracking-widest">Listening...</span>}
           </button>
           
-          <div className="p-1 glass-card flex gap-1">
-            {['overview', 'proctoring', 'analytics'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
-                  activeTab === tab ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+
         </div>
       </header>
 
@@ -125,12 +205,19 @@ export default function TeacherDashboard() {
             </div>
             
             <div className="h-[400px] w-full">
-               <ReactECharts 
-                 option={heatmapOption} 
-                 style={{ height: '100%', width: '100%' }}
-                 notMerge={true}
-                 lazyUpdate={true}
-               />
+               {chartReady ? (
+                 <ReactECharts 
+                   option={heatmapOption} 
+                   style={{ height: '100%', width: '100%' }}
+                   notMerge={true}
+                   lazyUpdate={true}
+                 />
+               ) : (
+                 <div className="flex items-center justify-center h-full gap-3 text-gray-600">
+                   <div className="w-5 h-5 rounded-full border-2 border-neon-blue border-t-transparent animate-spin" />
+                   <span className="text-xs font-black uppercase tracking-widest">Loading 3D Engine...</span>
+                 </div>
+               )}
             </div>
             
             <div className="absolute bottom-6 left-6 right-6 p-4 glass-card bg-black/40 flex justify-between items-center translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
@@ -188,7 +275,7 @@ export default function TeacherDashboard() {
                   whileHover={{ scale: 1.02, x: 5 }}
                   className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4 cursor-pointer hover:border-white/20 transition-all"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 p-[2px]">
+                  <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-500 p-[2px]">
                     <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-[10px] font-bold">
                       {s.name.split(' ').map(n => n[0]).join('')}
                     </div>
@@ -211,7 +298,7 @@ export default function TeacherDashboard() {
             </button>
           </div>
 
-          <div className="glass-card p-6 flex flex-col gap-6 border-neon-blue/20 bg-gradient-to-br from-neon-blue/5 to-transparent">
+          <div className="glass-card p-6 flex flex-col gap-6 border-neon-blue/20 bg-linear-to-br from-neon-blue/5 to-transparent">
             <div className="flex justify-between items-center">
                <h3 className="text-xs font-black text-neon-blue uppercase tracking-[0.2em] flex items-center gap-2">
                   <Database size={16} /> CONTENT DEPLOYMENT HUB

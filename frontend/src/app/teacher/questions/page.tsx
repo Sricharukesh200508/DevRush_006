@@ -1,22 +1,54 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Search, Filter, Code, Type,
-  ChevronDown, X, Sparkles
+  ChevronDown, X, Sparkles, BookOpen
 } from 'lucide-react';
 import QuestionBuilder from '@/components/cms/QuestionBuilder';
 
 export default function AdvancedQuestionBank() {
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
 
-  const handleSave = (data: any) => {
-    console.log("Forensic Neuron Deployed:", data);
-    setShowBuilder(false);
-    setEditingQuestion(null);
-    // Integration: POST to /questions API via TanStack Query
+  const fetchQuestions = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/cms/data');
+      const data = await res.json();
+      setQuestions(data.questions || []);
+    } catch(err) {
+      console.error('Failed to pull neurons:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuestions();
+  }, []);
+
+  const handleSave = async (data: any) => {
+    try {
+      await fetch('http://localhost:8000/api/cms/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      console.log("Forensic Neuron Deployed:", data);
+      setShowBuilder(false);
+      setEditingQuestion(null);
+      fetchQuestions(); // Refresh UI
+    } catch (err) {
+      console.error("Save failed:", err);
+    }
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    // For hackathon demo, we delete via /api/cms/questions/{id} but since no backend exists for delete,
+    // we'll just mock it visually or simulate. If there's an API, call it.
+    // Assuming no delete endpoint provided, we filter client side for demo
+    setQuestions(prev => prev.filter(q => q.id !== id));
   };
 
   return (
@@ -39,7 +71,7 @@ export default function AdvancedQuestionBank() {
 
       {/* Global Filter Bar */}
       <div className="flex gap-4 mb-12 translate-y-[-20px]">
-        <div className="flex-1 glass-card p-2 flex items-center gap-4 border-neon-purple/10 bg-white/[0.02]">
+        <div className="flex-1 glass-card p-2 flex items-center gap-4 border-neon-purple/10 bg-white/2">
           <Search className="ml-4 text-gray-500" size={20} />
           <input 
             type="text" 
@@ -54,38 +86,42 @@ export default function AdvancedQuestionBank() {
 
       {/* Neuron Grid View */}
       <div className="grid grid-cols-1 gap-6">
-        {[1, 2, 3, 4].map((i) => (
+        {questions.length === 0 ? (
+          <div className="text-center p-12 text-gray-500 font-black uppercase">No neurons deployed. Generate one.</div>
+        ) : questions.map((q: any) => (
           <motion.div 
-            key={i}
+            key={q.id}
             whileHover={{ x: 10 }}
-            className="glass-card p-10 group hover:border-neon-purple/30 transition-all flex gap-10 items-center bg-gradient-to-r from-transparent to-white/[0.01]"
+            className="glass-card p-10 group hover:border-neon-purple/30 transition-all flex gap-10 items-center bg-linear-to-r from-transparent to-white/1"
           >
              <div className="p-5 bg-neon-purple/10 rounded-3xl text-neon-purple border border-neon-purple/20">
-                {i % 2 === 0 ? <Code size={32} /> : <Type size={32} />}
+                {q.type === 'CODING' ? <Code size={32} /> : <Type size={32} />}
              </div>
              
              <div className="flex-1">
                 <div className="flex items-center gap-4 mb-4">
-                   <span className="px-4 py-1 bg-neon-purple/5 border border-neon-purple/10 rounded-full text-[10px] font-black text-neon-purple uppercase">RECURSION</span>
-                   <span className="px-4 py-1 bg-green-500/10 text-green-500 rounded-full text-[10px] font-black uppercase">EASY</span>
-                   <div className="h-4 w-[1px] bg-white/10 mx-2" />
-                   <span className="text-[10px] font-black text-gray-500 uppercase flex items-center gap-1"><Sparkles size={10}/> Weighted Score: 4.8</span>
+                   <span className="px-4 py-1 bg-neon-purple/5 border border-neon-purple/10 rounded-full text-[10px] font-black text-neon-purple uppercase">{q.subject || 'GENERAL'}</span>
+                   <span className={`px-4 py-1 ${q.difficulty === 'HARD' ? 'bg-red-500/10 text-red-500' : q.difficulty === 'MEDIUM' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-green-500/10 text-green-500'} rounded-full text-[10px] font-black uppercase`}>
+                     {q.difficulty || 'EASY'}
+                   </span>
+                   <div className="h-4 w-px bg-white/10 mx-2" />
+                   <span className="text-[10px] font-black text-gray-500 uppercase flex items-center gap-1"><Sparkles size={10}/> Weight: {q.weight || 1}</span>
                 </div>
                 
-                <h3 className="text-2xl font-bold leading-relaxed max-w-3xl">
-                   Identify the base case in a Depth First Search (DFS) algorithm when traversing an acyclic graph.
+                <h3 className="text-xl font-bold leading-relaxed max-w-3xl">
+                   {q.text}
                 </h3>
              </div>
 
              <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
                 <button 
-                  onClick={() => { setEditingQuestion({ id: i, text: '...', type: 'MCQ' }); setShowBuilder(true); }}
+                  onClick={() => { setEditingQuestion(q); setShowBuilder(true); }}
                   className="px-10 py-3 rounded-xl bg-white/5 font-black text-[10px] uppercase hover:bg-white/10 tracking-widest border border-white/5"
                 >
                   Edit Neuron
                 </button>
-                <div className="h-10 w-[1px] bg-white/10" />
-                <button className="p-3 bg-red-400/10 text-red-500/40 hover:text-red-500 rounded-xl transition-all">
+                <div className="h-10 w-px bg-white/10" />
+                <button onClick={(e) => handleDelete(q.id, e)} className="p-3 bg-red-400/10 text-red-500/40 hover:text-red-500 rounded-xl transition-all">
                    <X size={20} />
                 </button>
              </div>
@@ -100,7 +136,7 @@ export default function AdvancedQuestionBank() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl p-12 custom-scrollbar overflow-y-auto"
+            className="fixed inset-0 z-100 bg-black/90 backdrop-blur-xl p-12 custom-scrollbar overflow-y-auto"
           >
             <div className="max-w-6xl mx-auto h-[800px]">
                <QuestionBuilder 

@@ -89,7 +89,7 @@ export default function QuestionBuilder({ onSave, onCancel, initialData }: Quest
            
            <div className="space-y-4">
               <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Real-time Preview</label>
-              <div className="w-full h-64 glass-card p-8 overflow-y-auto border-neon-purple/20 bg-gradient-to-br from-neon-purple/5 to-transparent">
+              <div className="w-full h-64 glass-card p-8 overflow-y-auto border-neon-purple/20 bg-linear-to-br from-neon-purple/5 to-transparent">
                  <p className="text-sm leading-relaxed text-gray-300">
                     {text.split('$').map((part, i) => (
                       i % 2 === 1 ? <InlineMath key={i} math={part} /> : part

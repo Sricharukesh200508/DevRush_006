@@ -194,6 +194,63 @@ async def get_teacher_results():
         }
     }
 
+@app.post("/api/generate-study-plan")
+async def generate_study_plan(request: dict):
+    """
+    Generates a personalized 7-Day Study Plan for a specific quiz result and student.
+    """
+    quiz_data = request.get("quiz_data", {})
+    student_id = request.get("student_id")
+    
+    plan = logic_ai.generate_study_plan_with_groq(quiz_data)
+    
+    # Save the plan to the specific result
+    db = read_db()
+    results = db.get("results", [])
+    
+    # Update the result in the database
+    updated = False
+    for res in results:
+        if res.get("student_id") == student_id and res.get("submitted_at") == quiz_data.get("submitted_at"):
+            res["generated_study_plan"] = plan
+            updated = True
+            break
+            
+    if not updated and len(results) > 0:
+        # Fallback: Just update the latest or the one matching student_id
+        for res in results:
+            if res.get("student_id") == student_id:
+                res["generated_study_plan"] = plan
+                break
+
+    write_db(db)
+    return {"status": "success", "plan": plan}
+
+@app.post("/api/student/study-plan-progress")
+async def update_study_plan_progress(request: dict):
+    """
+    Saves the student's progress and 'finished' state on their study plan.
+    """
+    student_id = request.get("student_id")
+    progress_percent = request.get("progress_percent", 0)
+    is_finished = request.get("is_finished", False)
+    
+    db = read_db()
+    results = db.get("results", [])
+    
+    updated = False
+    for res in results:
+        if res.get("student_id", "").upper() == str(student_id).upper() and res.get("generated_study_plan"):
+            res["generated_study_plan"]["progress_percent"] = progress_percent
+            res["generated_study_plan"]["is_finished"] = is_finished
+            updated = True
+            
+    if updated:
+        write_db(db)
+        return {"status": "success", "message": "Progress synchronized"}
+    
+    return {"status": "error", "message": "Study plan not found for this student"}
+
 # ── Quiz Assignment & Delivery Pipeline ───────────────────────────────────────
 
 @app.post("/api/teacher/assignments")
@@ -280,7 +337,7 @@ async def get_student_quizzes(student_id: str = "ST_001"):
                 "attempt_id": attempt.get("id") if attempt else None
             })
     
-    upcoming = [q for q in assigned if q["status"] == "not_started" and q.get("start_time", "") > now]
+    upcoming = [q for q in assigned if q["status"] == "not_started" and (q.get("start_time") or '') > now]
     active = [q for q in assigned if q["status"] in ["not_started", "in_progress"]]
     completed = [q for q in assigned if q["status"] == "completed"]
     

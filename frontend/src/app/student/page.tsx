@@ -8,10 +8,16 @@ import {
   Brain, Star, Sparkles, Send, Shield
 } from 'lucide-react';
 
+import StudentStudyPlanTimeline from '@/components/cms/StudentStudyPlanTimeline';
+import { useRouter } from 'next/navigation';
+
 export default function StudentDashboard() {
+  const router = useRouter();
+  const [studentIdentity, setStudentIdentity] = useState({ id: '', name: '' });
   const [difficulty, setDifficulty] = useState(65);
   const [chatOpen, setChatOpen] = useState(false);
   const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [studyPlan, setStudyPlan] = useState<any>(null);
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([
      { role: 'assistant', text: "Hey Alex! I noticed you spent 3x more time on the 'Base Case' section today. Want me to break it down like a video game level?" }
@@ -26,7 +32,7 @@ export default function StudentDashboard() {
     // Neural AI Logic Integration
     try {
       const formData = new FormData();
-      formData.append('student_id', 'ST_001');
+      formData.append('student_id', studentIdentity.id || 'ST_ANON');
       formData.append('topic', 'Recursion');
       formData.append('mastery', '0.45');
       
@@ -49,11 +55,32 @@ export default function StudentDashboard() {
 
   // Real-time synchronization with Neural CMS
   useEffect(() => {
+    // Auth Check
+    const sid = localStorage.getItem('student_id');
+    const sname = localStorage.getItem('student_name');
+    if (!sid) {
+      router.push('/student/login');
+      return;
+    }
+    setStudentIdentity({ id: sid, name: sname || 'Student' });
+
     fetch('http://localhost:8000/api/cms/data')
       .then(res => res.json())
       .then(data => setQuizzes(data.quizzes || []))
       .catch(err => console.error('Cloud Sync Failed:', err));
-  }, []);
+
+    fetch('http://localhost:8000/api/teacher/results')
+      .then(res => res.json())
+      .then(data => {
+         const results = data.results || [];
+         // ONLY get the study plan generated explicitly for this logged-in student
+         const myResults = results.filter((r: any) => r.student_id === sid && r.generated_study_plan);
+         if (myResults.length > 0) {
+            setStudyPlan(myResults[myResults.length - 1].generated_study_plan);
+         }
+      })
+      .catch(err => console.error(err));
+  }, [router]);
 
   // Mock data for 2026 aesthetics
   const PATH_DAYS = [
@@ -73,8 +100,8 @@ export default function StudentDashboard() {
       {/* Header */}
       <header className="flex justify-between items-center z-10">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter neon-text-purple">
-            NEURAL COACH <span className="text-white/20">|</span> HELLO ALEX
+          <h1 className="text-4xl font-black tracking-tighter neon-text-purple uppercase">
+            NEURAL COACH <span className="text-white/20">|</span> HELLO {studentIdentity.name.split(' ')[0]}
           </h1>
           <p className="text-gray-400 text-sm font-medium mt-1">Study smarter, not longer • Powered by DKT-26</p>
         </div>
@@ -114,34 +141,39 @@ export default function StudentDashboard() {
               </button>
             </div>
             
+            
             <div className="flex justify-between gap-4">
-              {PATH_DAYS.map((p, idx) => (
-                <motion.div 
-                  key={idx}
-                  whileHover={{ y: -5 }}
-                  className={`flex-1 p-6 rounded-3xl border transition-all duration-500 relative ${
-                    p.active ? 'bg-neon-purple/10 border-neon-purple shadow-[0_0_30px_rgba(188,19,254,0.15)]' : 'bg-white/5 border-white/5 hover:border-white/20'
-                  }`}
-                >
-                  {p.active && <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 bg-neon-purple text-white text-[8px] font-black px-3 py-1 rounded-full">ACTIVE NODE</div>}
-                  <p className="text-gray-500 text-xs font-bold mb-2 uppercase">{p.day}</p>
-                  <h4 className="text-xl font-black mb-4">{p.topic}</h4>
-                  
-                  {/* Confidence Ring */}
-                  <div className="relative w-16 h-16 flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/5" />
-                      <circle 
-                        cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" 
-                        strokeDasharray={175}
-                        strokeDashoffset={175 - (175 * p.mastery) / 100}
-                        className={p.active ? 'text-neon-purple' : 'text-neon-blue'}
-                      />
-                    </svg>
-                    <span className="absolute text-[10px] font-black">{p.mastery}%</span>
-                  </div>
-                </motion.div>
-              ))}
+              {studyPlan ? (
+                 <StudentStudyPlanTimeline plan={studyPlan} />
+              ) : (
+                PATH_DAYS.map((p, idx) => (
+                  <motion.div 
+                    key={idx}
+                    whileHover={{ y: -5 }}
+                    className={`flex-1 p-6 rounded-3xl border transition-all duration-500 relative ${
+                      p.active ? 'bg-neon-purple/10 border-neon-purple shadow-[0_0_30px_rgba(188,19,254,0.15)]' : 'bg-white/5 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    {p.active && <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 bg-neon-purple text-white text-[8px] font-black px-3 py-1 rounded-full">ACTIVE NODE</div>}
+                    <p className="text-gray-500 text-xs font-bold mb-2 uppercase">{p.day}</p>
+                    <h4 className="text-xl font-black mb-4">{p.topic}</h4>
+                    
+                    {/* Confidence Ring */}
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/5" />
+                        <circle 
+                          cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" 
+                          strokeDasharray={175}
+                          strokeDashoffset={175 - (175 * p.mastery) / 100}
+                          className={p.active ? 'text-neon-purple' : 'text-neon-blue'}
+                        />
+                      </svg>
+                      <span className="absolute text-[10px] font-black">{p.mastery}%</span>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
           </section>
 
@@ -222,7 +254,7 @@ export default function StudentDashboard() {
               </div>
            </div>
 
-          <div className="glass-card p-8 flex flex-col gap-6 border-neon-purple/20 bg-gradient-to-br from-neon-purple/5 to-transparent shadow-2xl">
+          <div className="glass-card p-8 flex flex-col gap-6 border-neon-purple/20 bg-linear-to-br from-neon-purple/5 to-transparent shadow-2xl">
             <div className="flex justify-between items-center">
                <h3 className="text-xs font-black text-neon-purple uppercase tracking-[0.2em] flex items-center gap-2">
                   <Activity size={16} /> NEURAL ASSESSMENT CENTER

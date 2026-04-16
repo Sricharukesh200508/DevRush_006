@@ -7,6 +7,7 @@ import {
   User, Brain, TrendingDown, Clock, Eye, Filter,
   Download, RefreshCw, Star, Zap, Flag
 } from 'lucide-react';
+import StudyPlanCard from '@/components/cms/StudyPlanCard';
 
 type TopicPerf = { topic: string; is_correct: boolean; question: string; student_answer: string; correct_answer: string };
 type Result = {
@@ -44,6 +45,30 @@ export default function TeacherResultsPage() {
   const [selected, setSelected] = useState<Result | null>(null);
   const [filter, setFilter] = useState<'all' | 'flagged' | 'passed' | 'failed'>('all');
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+
+  const generatePlanForStudent = async (studentData: Result) => {
+    setIsGeneratingPlan(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/generate-study-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: studentData.student_id,
+          quiz_data: studentData
+        })
+      });
+      const data = await res.json();
+      if (data.status === 'success' && data.plan) {
+         setSelected(prev => prev ? { ...prev, generated_study_plan: data.plan } as any : null);
+         fetchResults(); // Refresh background data
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  };
 
   const fetchResults = async () => {
     setLoading(true);
@@ -58,6 +83,33 @@ export default function TeacherResultsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExportCSV = () => {
+    if (!results || results.length === 0) {
+      alert("No results to export!");
+      return;
+    }
+    const headers = ["Student ID", "Student Name", "Score", "Time Taken (s)", "AI Flag", "Integrity Score", "Submitted At", "Weak Topics"];
+    const rows = results.map(r => [
+       r.student_id,
+       `"${r.student_name}"`, // Quote to handle spaces
+       r.score,
+       r.time_taken_seconds || 0,
+       r.ai_flag ? "Yes" : "No",
+       r.ai_integrity_score || "N/A",
+       `"${r.submitted_at || ''}"`,
+       `"${(r.weak_topics || []).join(', ')}"`
+    ]);
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `student_results_${new Date().getTime()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   useEffect(() => { fetchResults(); }, []);
@@ -89,7 +141,7 @@ export default function TeacherResultsPage() {
           <h1 className="text-4xl font-black tracking-tighter neon-text-blue uppercase mb-2">
             Student Submissions
           </h1>
-          <p className="text-gray-400 text-sm font-medium">
+          <p className="text-gray-400 text-sm font-medium" suppressHydrationWarning>
             AI-evaluated forensic assessment results • Last sync: {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
@@ -98,7 +150,7 @@ export default function TeacherResultsPage() {
             className="flex items-center gap-2 px-6 py-3 glass-card text-gray-400 font-black text-[10px] uppercase tracking-widest hover:text-white transition-all">
             <RefreshCw size={14} /> REFRESH
           </button>
-          <button className="flex items-center gap-2 px-6 py-3 bg-neon-blue/10 border border-neon-blue/30 text-neon-blue font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-neon-blue hover:text-black transition-all">
+          <button onClick={handleExportCSV} className="flex items-center gap-2 px-6 py-3 bg-neon-blue/10 border border-neon-blue/30 text-neon-blue font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-neon-blue hover:text-black transition-all shadow-[0_0_15px_rgba(0,242,255,0.2)]">
             <Download size={14} /> EXPORT CSV
           </button>
         </div>
@@ -176,7 +228,7 @@ export default function TeacherResultsPage() {
                   
                   {/* Student name */}
                   <div className="col-span-2 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-neon-purple/20 flex items-center justify-center text-neon-purple font-black text-xs flex-shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-neon-purple/20 flex items-center justify-center text-neon-purple font-black text-xs shrink-0">
                       {r.student_name?.[0]?.toUpperCase() || '?'}
                     </div>
                     <span className="text-sm font-black truncate">{r.student_name || 'Unknown'}</span>
@@ -255,11 +307,11 @@ export default function TeacherResultsPage() {
       <AnimatePresence>
         {selected && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-2xl flex items-start justify-center p-8 overflow-y-auto"
+            className="fixed inset-0 z-200 bg-black/90 backdrop-blur-2xl flex items-start justify-center p-8 overflow-y-auto"
             onClick={e => e.target === e.currentTarget && setSelected(null)}>
             <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }}
               className="glass-card w-full max-w-2xl my-8 border-neon-blue/20 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-blue via-neon-purple to-transparent" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-neon-blue via-neon-purple to-transparent" />
               
               <div className="p-10 space-y-8">
                 {/* Student Identity */}
@@ -328,18 +380,30 @@ export default function TeacherResultsPage() {
                   </div>
                 </div>
 
-                {/* Study Plan */}
+                {/* Advanced Study Plan */}
                 <div>
-                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Zap size={12} className="text-neon-purple" /> AI-Generated Study Plan
-                  </h4>
-                  <div className="space-y-2">
-                    {(selected.study_plan || []).map((step, i) => (
-                      <div key={i} className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
-                        <span className="text-[9px] text-gray-300">{step}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {/* @ts-ignore */}
+                  {selected.generated_study_plan ? (
+                     <StudyPlanCard 
+                       /* @ts-ignore */
+                       plan={selected.generated_study_plan} 
+                       onRegenerate={() => generatePlanForStudent(selected)}
+                       isRegenerating={isGeneratingPlan}
+                     />
+                  ) : (
+                     <div className="p-6 rounded-2xl border border-neon-blue/20 bg-neon-blue/5 text-center">
+                        <Zap size={24} className="text-neon-blue mx-auto mb-3" />
+                        <h4 className="text-sm font-black uppercase text-neon-blue mb-2">Automated 7-Day Curriculum</h4>
+                        <p className="text-[10px] text-gray-400 mb-4">No advanced study plan generated for this submission yet.</p>
+                        <button 
+                          onClick={() => generatePlanForStudent(selected)}
+                          disabled={isGeneratingPlan}
+                          className="px-6 py-3 bg-neon-blue text-black font-black text-[10px] uppercase rounded-xl hover:scale-105 transition-all shadow-[0_0_15px_rgba(0,242,255,0.3)] disabled:opacity-50"
+                        >
+                          {isGeneratingPlan ? 'GENERATING CURRICULUM...' : 'GENERATE 7-DAY STUDY PLAN'}
+                        </button>
+                     </div>
+                  )}
                 </div>
 
                 <button onClick={() => setSelected(null)}

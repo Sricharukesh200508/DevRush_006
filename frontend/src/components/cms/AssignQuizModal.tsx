@@ -91,12 +91,12 @@ export default function AssignQuizModal({ quiz, onClose }: AssignModalProps) {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-2xl flex items-start justify-center p-8 overflow-y-auto">
+      className="fixed inset-0 z-200 bg-black/90 backdrop-blur-2xl flex items-start justify-center p-8 overflow-y-auto">
       <motion.div initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }}
         className="glass-card w-full max-w-3xl my-8 border-neon-purple/20 relative overflow-hidden">
         
         {/* Top accent */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-purple via-neon-blue to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-neon-purple via-neon-blue to-transparent" />
         
         {/* Header */}
         <div className="flex justify-between items-start p-10 border-b border-white/5">

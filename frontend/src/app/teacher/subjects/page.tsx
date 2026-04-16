@@ -75,7 +75,7 @@ export default function SubjectsCMS() {
 
       {/* Global Filter Bar */}
       <div className="grid grid-cols-12 gap-8 mb-12">
-        <div className="col-span-8 glass-card p-2 flex items-center gap-4 border-neon-blue/10 bg-white/[0.02]">
+        <div className="col-span-8 glass-card p-2 flex items-center gap-4 border-neon-blue/10 bg-white/2">
           <Search className="ml-4 text-gray-500" size={20} />
           <input 
             type="text" 
@@ -97,7 +97,7 @@ export default function SubjectsCMS() {
             key={subject.id || idx}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-card group hover:border-neon-blue/40 transition-all duration-500 overflow-hidden relative bg-gradient-to-br from-white/[0.02] to-transparent"
+            className="glass-card group hover:border-neon-blue/40 transition-all duration-500 overflow-hidden relative bg-linear-to-br from-white/2 to-transparent"
           >
             <div className="p-8">
               <div className="flex justify-between items-start mb-8">
@@ -128,7 +128,7 @@ export default function SubjectsCMS() {
                  </div>
               </div>
 
-              <button className="w-full py-4 rounded-2xl border border-white/5 bg-white/[0.03] hover:bg-neon-blue hover:text-black font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3">
+              <button className="w-full py-4 rounded-2xl border border-white/5 bg-white/3 hover:bg-neon-blue hover:text-black font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3">
                 MANAGE TOPIC TREE <ChevronRight size={14} />
               </button>
             </div>
@@ -138,7 +138,7 @@ export default function SubjectsCMS() {
         <motion.div 
           onClick={() => setShowAddModal(true)}
           whileHover={{ scale: 1.02 }}
-          className="glass-card border-2 border-dashed border-white/5 flex flex-col items-center justify-center p-12 text-gray-600 hover:text-neon-blue hover:border-neon-blue/40 cursor-pointer transition-all bg-white/[0.01]"
+          className="glass-card border-2 border-dashed border-white/5 flex flex-col items-center justify-center p-12 text-gray-600 hover:text-neon-blue hover:border-neon-blue/40 cursor-pointer transition-all bg-white/1"
         >
           <PlusCircle size={48} className="mb-4 opacity-10" />
           <span className="text-[10px] font-black uppercase tracking-[0.3em]">Initialize Discipline</span>
@@ -150,7 +150,7 @@ export default function SubjectsCMS() {
         {showAddModal && (
           <motion.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-2xl flex items-center justify-center p-8"
+            className="fixed inset-0 z-100 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-8"
           >
              <motion.div 
                initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}

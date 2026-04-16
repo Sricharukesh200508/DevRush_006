@@ -85,7 +85,7 @@ export default function MediaPipeController({ onTelemetry }: { onTelemetry: (dat
          <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${status.includes('Active') ? 'bg-cyan-500 shadow-[0_0_10px_#00f2ff]' : 'bg-red-500'}`} />
          <span className="text-[8px] font-black uppercase text-white tracking-[0.2em]">{status}</span>
       </div>
-      <div className="absolute inset-0 pointer-events-none border-[1px] border-white/5 rounded-[32px] group-hover:border-cyan-500/20 transition-all duration-500" />
+      <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-[32px] group-hover:border-cyan-500/20 transition-all duration-500" />
     </div>
   );
 }

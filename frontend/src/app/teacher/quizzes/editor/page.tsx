@@ -29,10 +29,37 @@ export default function QuizEditor() {
   const [isSaved, setIsSaved] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [deployedQuizId, setDeployedQuizId] = useState<string | null>(null);
-  const [questions, setQuestions] = useState([
+  const [showBank, setShowBank] = useState(false);
+  const [bankQuestions, setBankQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<any[]>([
     { id: 1, text: "What is the time complexity of a balanced BST search?", points: 5, difficulty: 'Easy' },
     { id: 2, text: "Implement a recursive function for Fibonacci numbers.", points: 10, difficulty: 'Medium' }
   ]);
+
+  const loadBank = async () => {
+     if (showBank) {
+        setShowBank(false);
+        return;
+     }
+     try {
+        const res = await fetch('http://localhost:8000/api/cms/data');
+        const data = await res.json();
+        setBankQuestions(data.questions || []);
+        setShowBank(true);
+     } catch (err) {
+        console.error("Failed to load bank", err);
+     }
+  };
+
+  const addNeuron = (q: any) => {
+     if (!questions.find((x: any) => x.id === q.id)) {
+        setQuestions([...questions, { ...q, points: q.points || 10, difficulty: q.difficulty || 'Medium' }]);
+     }
+  };
+  
+  const removeNeuron = (id: any) => {
+     setQuestions(questions.filter((q: any) => q.id !== id));
+  };
 
   const { register, watch, getValues, formState: { errors } } = useForm({
     resolver: zodResolver(quizSchema),
@@ -174,7 +201,7 @@ export default function QuizEditor() {
              </button>
            ))}
 
-           <div className="mt-8 glass-card p-8 border-neon-blue/10 bg-gradient-to-br from-neon-blue/5 to-transparent">
+           <div className="mt-8 glass-card p-8 border-neon-blue/10 bg-linear-to-br from-neon-blue/5 to-transparent">
               <h4 className="text-[10px] font-black uppercase text-neon-blue mb-4 tracking-tighter flex items-center gap-2">
                 <Sparkles size={14} /> AI Distribution Hint
               </h4>
@@ -282,16 +309,115 @@ export default function QuizEditor() {
                               </div>
                            </div>
                            <div className="flex gap-2">
-                              <button className="p-2 bg-white/5 hover:bg-red-400/10 text-gray-600 hover:text-red-400 rounded-lg transition-all"><Trash2 size={16} /></button>
+                              <button onClick={() => removeNeuron(q.id)} className="p-2 bg-white/5 hover:bg-red-400/10 text-gray-600 hover:text-red-400 rounded-lg transition-all"><Trash2 size={16} /></button>
                               <button className="p-2 bg-white/5 hover:bg-neon-blue/10 text-gray-600 hover:text-neon-blue rounded-lg cursor-grab active:cursor-grabbing"><ListOrdered size={16} /></button>
                            </div>
                         </div>
                      ))}
                   </div>
 
-                  <button className="w-full py-8 border-2 border-dashed border-white/5 rounded-3xl text-gray-600 font-black uppercase text-[10px] tracking-widest hover:border-neon-blue/30 hover:text-neon-blue hover:bg-neon-blue/5 transition-all duration-700">
-                     + PULL MORE NEURONS FROM BANK
+                  <button onClick={loadBank} className="w-full py-8 border-2 border-dashed border-white/5 rounded-3xl text-gray-600 font-black uppercase text-[10px] tracking-widest hover:border-neon-blue/30 hover:text-neon-blue hover:bg-neon-blue/5 transition-all duration-700">
+                     {showBank ? '- CLOSE NEURAL BANK' : '+ PULL MORE NEURONS FROM BANK'}
                   </button>
+
+                  <AnimatePresence>
+                     {showBank && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden border-t border-white/10 pt-4">
+                           {bankQuestions.length === 0 ? (
+                              <p className="text-center text-gray-500 text-xs italic p-4">Neural Bank is empty. Generate questions first.</p>
+                           ) : bankQuestions.map(bq => (
+                              <div key={bq.id} className="p-4 bg-white/2 border border-white/5 rounded-2xl flex items-center justify-between group hover:border-neon-purple/30">
+                                 <div>
+                                    <p className="text-sm font-bold">{bq.text}</p>
+                                    <span className="text-[10px] text-gray-500 uppercase">{bq.subject || 'GENERAL'} • {bq.difficulty || 'MEDIUM'}</span>
+                                 </div>
+                                 <button 
+                                    onClick={() => addNeuron(bq)}
+                                    disabled={questions.some(q => q.id === bq.id)}
+                                    className="px-4 py-2 border border-neon-purple text-neon-purple rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neon-purple hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                 >
+                                    {questions.some(q => q.id === bq.id) ? 'ADDED' : 'PULL TO QUIZ'}
+                                 </button>
+                              </div>
+                           ))}
+                        </motion.div>
+                     )}
+                  </AnimatePresence>
+               </motion.div>
+             )}
+
+             {activeSegment === 'proctoring' && (
+               <motion.div 
+                 key="proctoring"
+                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                 className="space-y-8"
+               >
+                  <h3 className="text-2xl font-black mb-8 flex items-center gap-3"><Shield size={24} className="text-neon-purple" /> FORENSIC PROCTORING CONFIG</h3>
+                  
+                  <div className="grid grid-cols-2 gap-8">
+                     <div className="p-8 border border-white/10 rounded-3xl bg-white/5 hover:border-neon-purple/50 transition-all cursor-pointer group">
+                        <div className="flex justify-between items-start mb-4">
+                           <div className="p-3 bg-neon-purple/10 rounded-2xl text-neon-purple"><Sparkles size={20} /></div>
+                           <input type="checkbox" {...register('proctoring')} className="w-6 h-6 accent-neon-purple" />
+                        </div>
+                        <h4 className="font-bold mb-2">MediaPipe Deep Proctoring</h4>
+                        <p className="text-xs text-gray-500 leading-relaxed">
+                           Activate live WebGL tracking. Captures 3D facial vectors, calculates lip synchrony mapping to detect whispering, and measures absolute pupil deviation over time.
+                        </p>
+                     </div>
+
+                     <div className="p-8 border border-white/10 rounded-3xl bg-white/5 opacity-50 cursor-not-allowed group">
+                        <div className="flex justify-between items-start mb-4">
+                           <div className="p-3 bg-white/10 rounded-2xl text-gray-500"><Lock size={20} /></div>
+                           <span className="px-3 py-1 bg-white/5 rounded-full text-[10px] uppercase font-black">ENTERPRISE TIER</span>
+                        </div>
+                        <h4 className="font-bold mb-2">Multi-Person Detection</h4>
+                        <p className="text-xs text-gray-500 leading-relaxed">
+                           Identifies background entities entering the frame during the assessment using YOLO integration. Requires a Tier 2 subscription node.
+                        </p>
+                     </div>
+                  </div>
+               </motion.div>
+             )}
+
+             {activeSegment === 'access' && (
+               <motion.div 
+                 key="access"
+                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                 className="space-y-8"
+               >
+                  <h3 className="text-2xl font-black mb-8 flex items-center gap-3"><Clock size={24} className="text-neon-blue" /> SCHEDULING & METRICS</h3>
+                  
+                  <div className="grid grid-cols-2 gap-12">
+                     <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Opening Window</label>
+                        <input 
+                           type="datetime-local"
+                           {...register('startTime')}
+                           className="w-full bg-white/5 border border-white/10 rounded-2xl py-6 px-8 text-sm font-bold outline-none focus:border-neon-blue transition-all"
+                        />
+                     </div>
+                     <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Strict Closing Deadline</label>
+                        <input 
+                           type="datetime-local"
+                           {...register('endTime')}
+                           className="w-full bg-white/5 border border-white/10 rounded-2xl py-6 px-8 text-sm font-bold outline-none focus:border-neon-blue transition-all"
+                        />
+                     </div>
+                  </div>
+
+                  <div className="p-8 border border-white/10 rounded-3xl bg-white/5 mt-8">
+                      <div className="mb-4 text-[10px] font-black uppercase text-neon-blue tracking-[0.2em]">Mandatory Passing Protocol</div>
+                      <div className="flex gap-4 items-center">
+                         <input 
+                            type="range" min="0" max="100" 
+                            {...register('passingScore', { valueAsNumber: true })}
+                            className="flex-1 accent-neon-blue" 
+                         />
+                         <span className="w-16 text-center text-xl font-black bg-white/5 py-2 rounded-xl">{watch('passingScore')}%</span>
+                      </div>
+                  </div>
                </motion.div>
              )}
            </AnimatePresence>
