@@ -194,6 +194,42 @@ async def get_teacher_results():
         }
     }
 
+@app.post("/api/student/generate-plan")
+async def generate_plan_for_student(request: dict):
+    """
+    Teacher-side: generate a 7-Day study plan for a specific student
+    by their student_id, weak_topics, look_away_count, and score.
+    Called by the teacher results dashboard.
+    """
+    student_id = request.get("student_id", "unknown")
+    weak_topics = request.get("weak_topics", [])
+    look_away_count = request.get("look_away_count", 0)
+    score = request.get("score", 0)
+    student_name = request.get("student_name", "Student")
+
+    # Build quiz_data payload compatible with generate_study_plan_with_groq
+    quiz_data = {
+        "student_id": student_id,
+        "student_name": student_name,
+        "weak_topics": weak_topics,
+        "look_away_count": look_away_count,
+        "score": score,
+    }
+
+    plan = logic_ai.generate_study_plan_with_groq(quiz_data)
+
+    # Persist the plan into the matching result record
+    db = read_db()
+    results = db.get("results", [])
+    for res in results:
+        if res.get("student_id", "").lower() == str(student_id).lower():
+            res["generated_study_plan"] = plan
+            break
+    write_db(db)
+
+    return {"status": "success", "plan": plan}
+
+
 @app.post("/api/generate-study-plan")
 async def generate_study_plan(request: dict):
     """
@@ -250,6 +286,37 @@ async def update_study_plan_progress(request: dict):
         return {"status": "success", "message": "Progress synchronized"}
     
     return {"status": "error", "message": "Study plan not found for this student"}
+
+@app.get("/api/student/mastery/{student_id}")
+async def get_student_mastery(student_id: str):
+    """
+    Calculates actual mastery percentage for each topic based on student's performance.
+    """
+    db = read_db()
+    results = [r for r in db.get("results", []) if r.get("student_id") == student_id]
+    
+    mastery = {} # topic -> {correct, total}
+    for res in results:
+        for perf in res.get("topic_performance", []):
+            topic = perf.get("topic")
+            if topic not in mastery:
+                mastery[topic] = {"correct": 0, "total": 0}
+            mastery[topic]["total"] += 1
+            if perf.get("is_correct"):
+                mastery[topic]["correct"] += 1
+                
+    # Convert to percentages
+    output = []
+    for topic, stats in mastery.items():
+        percentage = round((stats["correct"] / stats["total"]) * 100) if stats["total"] > 0 else 0
+        output.append({
+            "topic": topic,
+            "mastery": percentage,
+            "total_questions": stats["total"]
+        })
+        
+    return {"mastery": output}
+
 
 # ── Quiz Assignment & Delivery Pipeline ───────────────────────────────────────
 

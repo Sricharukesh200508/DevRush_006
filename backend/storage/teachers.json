@@ -1,0 +1,10 @@
+{
+  "teachers": [
+    {
+      "id": "T_RAMESH",
+      "name": "ramesh",
+      "dob": "2005-12-08",
+      "database": "database_T_RAMESH.json"
+    }
+  ]
+}

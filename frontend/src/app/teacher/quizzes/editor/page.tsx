@@ -297,7 +297,7 @@ export default function QuizEditor() {
 
                   <div className="space-y-4">
                      {questions.map((q, idx) => (
-                        <div key={q.id} className="p-6 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-6 group hover:border-neon-blue/30 transition-all">
+                        <div key={q.id ?? idx} className="p-6 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-6 group hover:border-neon-blue/30 transition-all">
                            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-xs font-black text-gray-500 group-hover:bg-neon-blue group-hover:text-black transition-all">
                               {idx + 1}
                            </div>
@@ -325,8 +325,8 @@ export default function QuizEditor() {
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden border-t border-white/10 pt-4">
                            {bankQuestions.length === 0 ? (
                               <p className="text-center text-gray-500 text-xs italic p-4">Neural Bank is empty. Generate questions first.</p>
-                           ) : bankQuestions.map(bq => (
-                              <div key={bq.id} className="p-4 bg-white/2 border border-white/5 rounded-2xl flex items-center justify-between group hover:border-neon-purple/30">
+                           ) : bankQuestions.map((bq, idx) => (
+                              <div key={bq.id ?? idx} className="p-4 bg-white/2 border border-white/5 rounded-2xl flex items-center justify-between group hover:border-neon-purple/30">
                                  <div>
                                     <p className="text-sm font-bold">{bq.text}</p>
                                     <span className="text-[10px] text-gray-500 uppercase">{bq.subject || 'GENERAL'} • {bq.difficulty || 'MEDIUM'}</span>

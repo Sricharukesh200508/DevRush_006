@@ -39,7 +39,7 @@ export default function TeacherDashboard() {
     }
 
     // Fetch actual accurate numbers for the heatmap
-    fetch('http://localhost:8000/api/teacher/results')
+    fetch('http://127.0.0.1:8000/api/teacher/results')
       .then(r => r.json())
       .then(resData => {
          const results = resData.results || [];

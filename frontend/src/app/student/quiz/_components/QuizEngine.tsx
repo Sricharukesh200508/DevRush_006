@@ -73,6 +73,7 @@ export default function QuizEngine({ quizId }: { quizId: string }) {
   const [flags, setFlags] = useState<Set<number>>(new Set());
   const [telemetryStream, setTelemetryStream] = useState<any[]>([]);
   const [lookAwayCount, setLookAwayCount] = useState(0);
+  const [eyesClosedCount, setEyesClosedCount] = useState(0);
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
@@ -101,10 +102,11 @@ export default function QuizEngine({ quizId }: { quizId: string }) {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, [phase]);
 
-  // ── Telemetry ───────────────────────────────────────────────────────────────
+  // ── Telemetry ───────────────────────────────────────────────────────────
   const handleTelemetry = useCallback((data: any) => {
     setTelemetryStream(prev => [...prev.slice(-99), { ...data, t: Date.now() }]);
-    if (data.isLookingAway) setLookAwayCount(c => c + 1);
+    if (data.isLookingAway && !data.eyesClosed) setLookAwayCount(c => c + 1);
+    if (data.eyesClosed) setEyesClosedCount(c => c + 1);
   }, []);
 
   // ── AI Hint ─────────────────────────────────────────────────────────────────
@@ -161,6 +163,7 @@ export default function QuizEngine({ quizId }: { quizId: string }) {
 
       // ── Forensic Telemetry ────────────────────────────────────
       look_away_count: lookAwayCount,
+      eyes_closed_count: eyesClosedCount,
       total_telemetry_events: telemetryStream.length,
       behavioral_vector: telemetryStream.map(t => (t.isLookingAway ? 0 : 1)),
       telemetry_sample: telemetryStream.slice(-10),
@@ -172,14 +175,14 @@ export default function QuizEngine({ quizId }: { quizId: string }) {
     // ── POST to backend ───────────────────────────────────────────────────────
     try {
       // 1. Store result + run AI analysis
-      await fetch('http://localhost:8000/api/cms/results', {
+      await fetch('http://127.0.0.1:8000/api/cms/results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       // 2. Also post to attempt tracker
-      await fetch(`http://localhost:8000/api/student/submit-quiz/attempt-${safeId}`, {
+      await fetch(`http://127.0.0.1:8000/api/student/submit-quiz/attempt-${safeId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -199,8 +202,12 @@ export default function QuizEngine({ quizId }: { quizId: string }) {
     doSubmit(false);
   };
 
-  const latestTel = telemetryStream[telemetryStream.length - 1];
-  const engagementPct = latestTel?.isLookingAway ? 42 : 89;
+  const latestTel     = telemetryStream[telemetryStream.length - 1];
+  const faceHidden    = latestTel?.faceDetected === false;
+  const eyesClosed    = latestTel?.eyesClosed === true;
+  const gazeAway      = latestTel?.isGazeAway === true && !faceHidden && !eyesClosed;
+  const anyAlert      = faceHidden || eyesClosed || gazeAway;
+  const engagementPct = faceHidden ? 8 : eyesClosed ? 25 : gazeAway ? 42 : 91;
   const answeredCount = Object.keys(answers).length;
   const currentQ = QUESTIONS[currentIdx];
 
@@ -470,9 +477,14 @@ export default function QuizEngine({ quizId }: { quizId: string }) {
           <div className="aspect-video w-full rounded-2xl overflow-hidden border border-white/10 bg-black/40 relative">
             <MediaPipeController onTelemetry={handleTelemetry} />
             <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur rounded-xl px-3 py-1.5 flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full shrink-0 ${latestTel?.isLookingAway ? 'bg-red-500 animate-pulse' : 'bg-green-400'}`} />
+              <div className={`w-2 h-2 rounded-full shrink-0 ${
+                faceHidden  ? 'bg-red-500 animate-ping'
+                : eyesClosed? 'bg-orange-500 animate-pulse'
+                : gazeAway  ? 'bg-yellow-400 animate-pulse'
+                : 'bg-green-400'
+              }`} />
               <span className="text-[8px] font-black uppercase text-gray-300 truncate">
-                {latestTel?.isLookingAway ? 'GAZE DEVIATION' : 'NEURAL PULSE ACTIVE'}
+                {faceHidden ? '⚠ FACE HIDDEN' : eyesClosed ? '⚠ EYES CLOSED' : gazeAway ? 'GAZE DEVIATION' : 'NEURAL PULSE ACTIVE'}
               </span>
             </div>
           </div>
@@ -503,16 +515,40 @@ export default function QuizEngine({ quizId }: { quizId: string }) {
               <p className="text-[9px] text-yellow-500 font-bold">⚠ {lookAwayCount} look-away event{lookAwayCount !== 1 ? 's' : ''} logged</p>
             )}
           </div>
-          {/* Gaze warning */}
+          {/* Proctor Alert Panel */}
           <AnimatePresence>
-            {latestTel?.isLookingAway && (
-              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+            {anyAlert && (
+              <motion.div
+                key={faceHidden ? 'face' : eyesClosed ? 'eyes' : 'gaze'}
+                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+                className={`p-4 border rounded-2xl ${
+                  faceHidden  ? 'bg-red-500/10 border-red-500/30'
+                  : eyesClosed? 'bg-orange-500/10 border-orange-500/30'
+                  : 'bg-yellow-500/10 border-yellow-500/20'
+                }`}>
                 <div className="flex items-center gap-2 mb-1">
-                  <AlertTriangle className="text-red-500" size={14} />
-                  <span className="text-[9px] font-black text-red-500 uppercase">Protocol Warning</span>
+                  <AlertTriangle
+                    className={faceHidden ? 'text-red-400' : eyesClosed ? 'text-orange-400' : 'text-yellow-400'}
+                    size={14}
+                  />
+                  <span className={`text-[9px] font-black uppercase ${
+                    faceHidden ? 'text-red-400' : eyesClosed ? 'text-orange-400' : 'text-yellow-400'
+                  }`}>
+                    {faceHidden ? 'Face Not Detected' : eyesClosed ? 'Eyes Detected Closed' : 'Gaze Deviation'}
+                  </span>
                 </div>
-                <p className="text-[9px] text-red-400">Gaze deviation detected. Realign immediately.</p>
+                <p className="text-[9px] text-gray-300">
+                  {faceHidden
+                    ? 'Your face is not visible. Look directly at the camera.'
+                    : eyesClosed
+                    ? 'Please keep your eyes open during the assessment.'
+                    : 'Gaze deviation detected. Look at the screen directly.'}
+                </p>
+                {eyesClosed && (
+                  <p className="text-[8px] text-orange-500/70 mt-1 font-bold">
+                    ⚠ {eyesClosedCount} closed-eye event{eyesClosedCount !== 1 ? 's' : ''} logged
+                  </p>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

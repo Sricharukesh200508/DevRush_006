@@ -18,6 +18,7 @@ export default function StudentDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [studyPlan, setStudyPlan] = useState<any>(null);
+  const [masteryData, setMasteryData] = useState<any[]>([]);
   const [message, setMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([
      { role: 'assistant', text: "Hey Alex! I noticed you spent 3x more time on the 'Base Case' section today. Want me to break it down like a video game level?" }
@@ -36,7 +37,7 @@ export default function StudentDashboard() {
       formData.append('topic', 'Recursion');
       formData.append('mastery', '0.45');
       
-      const res = await fetch('http://localhost:8000/analyze/gap_detection', {
+      const res = await fetch('http://127.0.0.1:8000/analyze/gap_detection', {
         method: 'POST',
         body: formData
       });
@@ -68,6 +69,11 @@ export default function StudentDashboard() {
       .then(res => res.json())
       .then(data => setQuizzes(data.quizzes || []))
       .catch(err => console.error('Cloud Sync Failed:', err));
+
+     fetch(`http://localhost:8000/api/student/mastery/${sid}`)
+      .then(res => res.json())
+      .then(data => setMasteryData(data.mastery || []))
+      .catch(err => console.error(err));
 
     fetch('http://localhost:8000/api/teacher/results')
       .then(res => res.json())
@@ -146,16 +152,16 @@ export default function StudentDashboard() {
               {studyPlan ? (
                  <StudentStudyPlanTimeline plan={studyPlan} />
               ) : (
-                PATH_DAYS.map((p, idx) => (
+                (masteryData.length > 0 ? masteryData : PATH_DAYS).map((p, idx) => (
                   <motion.div 
                     key={idx}
                     whileHover={{ y: -5 }}
                     className={`flex-1 p-6 rounded-3xl border transition-all duration-500 relative ${
-                      p.active ? 'bg-neon-purple/10 border-neon-purple shadow-[0_0_30px_rgba(188,19,254,0.15)]' : 'bg-white/5 border-white/5 hover:border-white/20'
+                      p.active || idx === 0 ? 'bg-neon-purple/10 border-neon-purple shadow-[0_0_30px_rgba(188,19,254,0.15)]' : 'bg-white/5 border-white/5 hover:border-white/20'
                     }`}
                   >
-                    {p.active && <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 bg-neon-purple text-white text-[8px] font-black px-3 py-1 rounded-full">ACTIVE NODE</div>}
-                    <p className="text-gray-500 text-xs font-bold mb-2 uppercase">{p.day}</p>
+                    {(p.active || idx === 0) && <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 bg-neon-purple text-white text-[8px] font-black px-3 py-1 rounded-full">ACTIVE NODE</div>}
+                    <p className="text-gray-500 text-xs font-bold mb-2 uppercase">{p.day || 'Topic'}</p>
                     <h4 className="text-xl font-black mb-4">{p.topic}</h4>
                     
                     {/* Confidence Ring */}
@@ -166,7 +172,7 @@ export default function StudentDashboard() {
                           cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" 
                           strokeDasharray={175}
                           strokeDashoffset={175 - (175 * p.mastery) / 100}
-                          className={p.active ? 'text-neon-purple' : 'text-neon-blue'}
+                          className={(p.active || idx === 0) ? 'text-neon-purple' : 'text-neon-blue'}
                         />
                       </svg>
                       <span className="absolute text-[10px] font-black">{p.mastery}%</span>

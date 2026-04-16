@@ -1,0 +1,90 @@
+{
+  "subjects": [],
+  "questions": [],
+  "quizzes": [
+    {
+      "proctoring": true,
+      "randomize": true,
+      "duration": 30,
+      "passingScore": 40,
+      "attempts": 1,
+      "title": "science",
+      "description": "",
+      "startTime": "",
+      "endTime": "",
+      "id": "qz-1776318532153",
+      "questions": [
+        {
+          "id": 1,
+          "text": "What is the time complexity of a balanced BST search?",
+          "points": 5,
+          "difficulty": "Easy"
+        },
+        {
+          "id": 2,
+          "text": "Implement a recursive function for Fibonacci numbers.",
+          "points": 10,
+          "difficulty": "Medium"
+        }
+      ],
+      "timestamp": "2026-04-16T05:48:52.153Z"
+    },
+    {
+      "proctoring": true,
+      "randomize": true,
+      "duration": 30,
+      "passingScore": 40,
+      "attempts": 1,
+      "title": "science12345",
+      "description": "",
+      "startTime": "",
+      "endTime": "",
+      "id": "qz-1776318557514",
+      "questions": [
+        {
+          "id": 1,
+          "text": "What is the time complexity of a balanced BST search?",
+          "points": 5,
+          "difficulty": "Easy"
+        },
+        {
+          "id": 2,
+          "text": "Implement a recursive function for Fibonacci numbers.",
+          "points": 10,
+          "difficulty": "Medium"
+        }
+      ],
+      "timestamp": "2026-04-16T05:49:17.515Z"
+    },
+    {
+      "proctoring": true,
+      "randomize": true,
+      "duration": 30,
+      "passingScore": 40,
+      "attempts": 1,
+      "title": "science12345",
+      "description": "",
+      "startTime": "",
+      "endTime": "",
+      "id": "qz-1776318581218",
+      "questions": [
+        {
+          "id": 1,
+          "text": "What is the time complexity of a balanced BST search?",
+          "points": 5,
+          "difficulty": "Easy"
+        },
+        {
+          "id": 2,
+          "text": "Implement a recursive function for Fibonacci numbers.",
+          "points": 10,
+          "difficulty": "Medium"
+        }
+      ],
+      "timestamp": "2026-04-16T05:49:41.218Z"
+    }
+  ],
+  "assignments": [],
+  "attempts": [],
+  "results": []
+}

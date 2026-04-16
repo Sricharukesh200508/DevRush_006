@@ -50,12 +50,15 @@ export default function TeacherResultsPage() {
   const generatePlanForStudent = async (studentData: Result) => {
     setIsGeneratingPlan(true);
     try {
-      const res = await fetch('http://localhost:8000/api/generate-study-plan', {
+      const res = await fetch('http://127.0.0.1:8000/api/student/generate-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           student_id: studentData.student_id,
-          quiz_data: studentData
+          student_name: studentData.student_name,
+          weak_topics: studentData.weak_topics,
+          look_away_count: studentData.look_away_count,
+          score: studentData.score
         })
       });
       const data = await res.json();
@@ -73,7 +76,7 @@ export default function TeacherResultsPage() {
   const fetchResults = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/teacher/results');
+      const res = await fetch('http://127.0.0.1:8000/api/teacher/results');
       const data = await res.json();
       setResults(data.results || []);
       setSummary(data.summary || null);
