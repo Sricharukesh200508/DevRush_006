@@ -1,0 +1,12 @@
+{
+  "build": {
+    "builder": "NIXPACKS",
+    "aptPkgs": [
+      "libgl1-mesa-glx",
+      "libglib2.0-0",
+      "libavcodec-dev",
+      "libavformat-dev",
+      "libswscale-dev"
+    ]
+  }
+}
